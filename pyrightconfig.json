@@ -1,0 +1,23 @@
+{
+  "include": ["src", "main.py"],
+  "exclude": [".venv", "__pycache__", "archive", "checkpoints", "results"],
+
+  "pythonVersion": "3.12",
+  "venvPath": ".",
+  "venv": ".venv",
+
+  "extraPaths": ["."],
+
+  "typeCheckingMode": "basic",
+
+  "reportDeprecated": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportCallIssue": "none",
+  "reportOperatorIssue": "none",
+  "reportIndexIssue": "none",
+  "reportReturnType": "none",
+  "reportArgumentType": "none"
+}

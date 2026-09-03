@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.DS_Store
+
+# Virtual environments
+.venv/
+
+# Temporary training runs & cache
+runs/
+*.cache
+archive/labels.cache
+
+# Heavy dataset images (Hosted on Google Drive)
+archive/images/
+*.zip
+
+# Editor settings
+.vscode/

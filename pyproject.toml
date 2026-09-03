@@ -1,0 +1,36 @@
+[project]
+name = "traffic-sign-quantization"
+version = "0.1.0"
+description = "Traffic Sign Recognition Quantization & Pruning Project"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.1",
+    "numpy>=2.0.0",
+    "onnx>=1.22.0",
+    "onnxruntime>=1.28.0",
+    "onnxslim>=0.1.96",
+    "opencv-python-headless>=5.0.0.93",
+    "pandas>=3.0.5",
+    "torch>=2.13.0",
+    "ultralytics>=8.4.115",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.venv
+  | __pycache__
+  | archive
+  | checkpoints
+  | results
+)/
+'''
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+]
