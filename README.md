@@ -207,7 +207,7 @@ traffic-sign-quantization/
 
 | Họ và Tên | Vai trò | Trách nhiệm chính |
 |---|---|---|
-| **Nguyễn Thành Trai** | Trưởng nhóm / AI Lead | Thiết kế kiến trúc, xây dựng pipeline, huấn luyện Baseline |
+| **Trần Thành Trai** | Trưởng nhóm / AI Lead | Thiết kế kiến trúc, xây dựng pipeline, huấn luyện Baseline |
 | **Nguyễn Thanh Hoàng** | Data Engineer | Chuẩn bị dữ liệu 52 lớp biển báo VN, kiểm thử dataset |
 | **Bùi Huy Phong** | Optimization Engineer | Nghiên cứu & triển khai Pruning, Quantization, Benchmark |
 | **Lý Quốc Vinh** | Demo & Integration | Xây dựng ứng dụng Demo thời gian thực, giao diện HUD tiếng Việt |

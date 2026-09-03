@@ -136,7 +136,7 @@ Báo cáo đồ án hoàn chỉnh, kèm mã nguồn, bộ số liệu thực ngh
 
 | Thành viên | Vai trò | Phụ trách chính |
 |---|---|---|
-| Nguyễn Thành Trai | Trưởng nhóm / Model AI Lead | Thiết kế kiến trúc hệ thống, xây dựng pipeline, huấn luyện YOLOv8-nano baseline |
+| Trần Thành Trai | Trưởng nhóm / Model AI Lead | Thiết kế kiến trúc hệ thống, xây dựng pipeline, huấn luyện YOLOv8-nano baseline |
 | Nguyễn Thanh Hoàng | Data Engineer | Thu thập, kiểm tra, chuẩn bị dataset biển báo VN; xây dựng data pipeline |
 | Bùi Huy Phong | Optimization Engineer | Triển khai Pruning, Quantization; đo lường và so sánh hiệu năng |
 | Lý Quốc Vinh | Demo & Integration | Xây dựng ứng dụng demo video thời gian thực; tích hợp hệ thống |
