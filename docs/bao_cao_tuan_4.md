@@ -261,6 +261,8 @@ size_mb = Path(model_path).stat().st_size / (1024 ** 2)
 | Combined (P50% + ONNX FP16) | **98.05%** | 73.67% | 36.38 ⚡ | 27.49 ms | 5.90 MB | Pruning + Quant — FPS ngang P40% (khác biệt là nhiễu đo) |
 
 > Bảng đầy đủ 10 mức pruning (20-99%) × baseline × 5 phương pháp quantize (26 dòng): [`results/comparison_metrics.csv`](../results/comparison_metrics.csv).
+>
+> **⚠️ Lưu ý về nhãn "Baseline (FP32)" và con số 5.98 MB:** YOLOv8n có 3,020,988 tham số — FP32 thật (4 byte/giá trị) phải nặng ~11.52 MB, nhưng `baseline.pt` chỉ 5.98 MB — khớp với kích thước FP16 (~5.76 MB + metadata). Nguyên nhân: Ultralytics mặc định gọi `.half()` trước khi ghi checkpoint `best.pt` ra đĩa để tiết kiệm dung lượng, dù khi nạp lại bằng `YOLO(...)`, PyTorch tự ép kiểu lên `float32` để tính toán (đã kiểm chứng `next(model.parameters()).dtype == torch.float32`). Vậy nhãn "FP32" đúng về **suy luận** (không lượng tử hóa) nhưng số MB hiển thị là kích thước **lưu trữ FP16 trên đĩa**, không phải FP32 thật — bằng chứng: export cùng model sang ONNX với `half=False` cho ra đúng 11.74 MB (~2× baseline.pt).
 
 > **Phân tích kết quả nổi bật (đã cập nhật lần 2 — bổ sung FP16):**
 > - **ONNX FP16 mới là lựa chọn tối ưu tổng thể**, không phải ONNX INT8 như kết luận ban đầu: giữ **97.77% mAP50** (gần như baseline) và đạt **37.24 FPS — nhanh hơn cả FP32** (27.06 FPS), dung lượng giảm ~50% (5.90 MB). Không cần calibration nên không có rủi ro lệch scale.

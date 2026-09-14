@@ -85,6 +85,8 @@ uv run python demo_video.py --source video.mp4 --model checkpoints/quant_onnx_fp
 | 11 | Combined (P50% + ONNX FP16) | **98.05%** | 73.67% | 36.38 ⚡ | 27.49 ms | 5.90 MB | FPS ngang P40% — chênh lệch là nhiễu đo, không phải xu hướng theo % pruning |
 
 > Bảng đầy đủ 10 mức pruning (20-99%) × 5 phương pháp quantize (26 dòng): [`results/comparison_metrics.csv`](../results/comparison_metrics.csv). Biểu đồ sweep: [`results/figures/pruning_sweep.png`](../results/figures/pruning_sweep.png).
+>
+> **⚠️ Vì sao "Baseline (FP32)" chỉ 5.98 MB thay vì ~11.5 MB lý thuyết?** Ultralytics mặc định `.half()` trọng số trước khi ghi `best.pt` ra đĩa (tiết kiệm dung lượng), nên file `.pt` thực chất lưu ở FP16 (~5.76 MB lý thuyết, khớp 5.98 MB thực tế), dù PyTorch tự ép kiểu lên `float32` khi nạp lại để tính toán. Nhãn "FP32" đúng về suy luận (không lượng tử hóa) nhưng số MB là kích thước lưu trữ FP16 — xem chi tiết tại [README.md](../README.md#-bảng-so-sánh-hiệu-năng-chi-tiết-benchmark-results).
 
 ### 3.2. Bảng so sánh tóm tắt — Baseline vs Best Optimized Model (ONNX FP16)
 
