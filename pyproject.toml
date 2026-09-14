@@ -37,8 +37,14 @@ dev = [
 ]
 
 [tool.uv.sources]
-torch = { index = "pytorch-cu126" }
-torchvision = { index = "pytorch-cu126" }
+# CUDA wheel chỉ tồn tại cho Linux/Windows; macOS (kể cả Apple Silicon) không có
+# build CUDA nên phải rơi về PyPI mặc định (CPU/MPS) trên Darwin.
+torch = [
+    { index = "pytorch-cu126", marker = "sys_platform != 'darwin'" },
+]
+torchvision = [
+    { index = "pytorch-cu126", marker = "sys_platform != 'darwin'" },
+]
 
 [[tool.uv.index]]
 name = "pytorch-cu126"
