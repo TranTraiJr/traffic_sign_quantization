@@ -4,8 +4,8 @@
 # Format: YOLO (x_center, y_center, width, height normalized 0-1)
 
 # Đường dẫn tuyệt đối đến file danh sách ảnh (tạo bởi yolo_dataset.py)
-train: /Users/traitran/Desktop/traffic-sign-quantization/data/yolo_train_paths.txt
-val: /Users/traitran/Desktop/traffic-sign-quantization/data/yolo_val_paths.txt
+train: C:/Users/MYPC/Code/traffic_sign_quantization/data/yolo_train_paths.txt
+val: C:/Users/MYPC/Code/traffic_sign_quantization/data/yolo_val_paths.txt
 
 nc: 52
 names:

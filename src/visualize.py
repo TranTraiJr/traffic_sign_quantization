@@ -41,7 +41,9 @@ COLOR_MAP = {
     "finetuned": "#ff9f43",        # Cam — Pruned + Finetuned
     "quant_dynamic": "#a29bfe",    # Tím — Dynamic Quant
     "quant_onnx": "#4ef18a",       # Xanh lá — ONNX INT8
-    "combined": "#ff6b81",         # Hồng — Combined
+    "quant_fp16": "#4ec9f1",       # Xanh dương nhạt — ONNX FP16
+    "combined": "#ff6b81",         # Hồng — Combined (Pruned + ONNX INT8)
+    "combined_fp16": "#c44ef1",    # Tím hồng — Combined (Pruned + ONNX FP16)
 }
 
 
@@ -49,16 +51,22 @@ def _get_color(model_name: str) -> str:
     name = model_name.lower()
     if "baseline" in name:
         return COLOR_MAP["baseline"]
-    if "finetuned" in name or "ft" in name:
-        return COLOR_MAP["finetuned"]
-    if "pruned" in name:
-        return COLOR_MAP["pruned"]
+    # Kiểm tra ONNX (INT8/FP16, kể cả Combined) TRƯỚC "finetuned" — vì tên
+    # model Combined luôn chứa cả 2 chữ "finetuned" và "onnx" (vd
+    # "pruned_40pct_finetuned_onnx_fp16"), nếu check "finetuned" trước sẽ
+    # luôn thắng và không bao giờ tô đúng màu Combined.
     if "onnx" in name and ("pruned" in name or "combined" in name):
-        return COLOR_MAP["combined"]
+        return COLOR_MAP["combined_fp16"] if "fp16" in name else COLOR_MAP["combined"]
+    if "fp16" in name:
+        return COLOR_MAP["quant_fp16"]
     if "onnx" in name:
         return COLOR_MAP["quant_onnx"]
     if "dynamic" in name:
         return COLOR_MAP["quant_dynamic"]
+    if "finetuned" in name or "ft" in name:
+        return COLOR_MAP["finetuned"]
+    if "pruned" in name:
+        return COLOR_MAP["pruned"]
     return "#888888"
 
 
@@ -78,7 +86,24 @@ def plot_accuracy_vs_size(df: pd.DataFrame) -> Path:
     fig, ax = plt.subplots(figsize=(10, 6))
     fig.patch.set_facecolor("#0f1117")
 
-    valid = df[df["map50"].notna() & (df["fps"] > 0)].copy()
+    # Loại các checkpoint "vừa prune, chưa fine-tune" (chỉ mang tính chẩn đoán)
+    # và chỉ giữ vài mức pruning tiêu biểu — vì mọi mức pruning có CÙNG kích
+    # thước file (unstructured pruning không đổi size), nên vẽ hết 10 mức sẽ
+    # chồng chéo lên nhau tại cùng 1 vị trí x. Chi tiết đầy đủ theo % xem ở
+    # pruning_sweep.png.
+    REPRESENTATIVE_PCT = {20, 50, 90, 99}
+    exclude_names = set()
+    for name in df["model"]:
+        if "pruned" in name and "onnx" not in name:
+            if "_finetuned" not in name:
+                exclude_names.add(name)  # chưa fine-tune, chỉ để chẩn đoán
+            else:
+                import re
+                m = re.search(r"(\d+)pct", name)
+                if m and int(m.group(1)) not in REPRESENTATIVE_PCT:
+                    exclude_names.add(name)
+
+    valid = df[df["map50"].notna() & (df["fps"] > 0) & (~df["model"].isin(exclude_names))].copy()
 
     for _, row in valid.iterrows():
         color = _get_color(row["model"])
@@ -104,8 +129,11 @@ def plot_accuracy_vs_size(df: pd.DataFrame) -> Path:
         mpatches.Patch(color=COLOR_MAP["baseline"], label="Baseline"),
         mpatches.Patch(color=COLOR_MAP["pruned"], label="Pruned"),
         mpatches.Patch(color=COLOR_MAP["finetuned"], label="Pruned + Fine-tune"),
+        mpatches.Patch(color=COLOR_MAP["quant_dynamic"], label="Dynamic Quant"),
         mpatches.Patch(color=COLOR_MAP["quant_onnx"], label="ONNX INT8"),
+        mpatches.Patch(color=COLOR_MAP["quant_fp16"], label="ONNX FP16"),
         mpatches.Patch(color=COLOR_MAP["combined"], label="Pruned + ONNX INT8"),
+        mpatches.Patch(color=COLOR_MAP["combined_fp16"], label="Pruned + ONNX FP16"),
     ]
     ax.legend(handles=legend_patches, loc="lower left", fontsize=9,
               facecolor="#1a1d27", edgecolor="#444444")
@@ -167,9 +195,11 @@ def plot_pruning_sweep(df: pd.DataFrame) -> Path:
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
     fig.patch.set_facecolor("#0f1117")
 
-    # Lọc các model pruned có fine-tune
+    # Lọc các model pruned có fine-tune (loại trừ "combined" pruned+ONNX vì tên
+    # cũng chứa "pruned"+"finetuned" nhưng không phải một điểm trên trục pruning rate)
     pruned_df = df[df["model"].str.contains("pruned") &
                    df["model"].str.contains("finetuned") &
+                   ~df["model"].str.contains("onnx") &
                    df["map50"].notna()].copy()
 
     def extract_pct(name: str) -> int:

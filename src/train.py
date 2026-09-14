@@ -152,6 +152,7 @@ def finetune(
     lr: float = 1e-4,
     save_name: str = "pruned_finetuned",
     device: str = "auto",
+    mask_path: Path | None = None,
 ) -> Path:
     """
     Fine-tune model sau khi pruning để phục hồi accuracy.
@@ -159,21 +160,46 @@ def finetune(
     Dùng learning rate nhỏ hơn nhiều so với training gốc
     để tránh "quên" các đặc trưng đã học (catastrophic forgetting).
 
+    Nếu `mask_path` được cung cấp (từ `apply_l1_pruning`), sparsity được
+    GIỮ NGUYÊN xuyên suốt fine-tune: một callback ép các vị trí đã prune
+    về lại 0 sau mỗi batch, để optimizer không âm thầm "hoàn tác" pruning.
+    Nếu không có mask, hành vi giống fine-tune thông thường.
+
     Args:
         model_path: Path đến .pt model đã prune
         epochs    : Số epoch fine-tune (thường 5-15, ít hơn train gốc nhiều)
         lr        : Learning rate nhỏ (default 1e-4 << 1e-2 training gốc)
         save_name : Tên checkpoint kết quả
+        mask_path : Path đến file mask (dict tên layer → tensor mask) để
+                    giữ sparsity qua fine-tune
 
     Returns:
         Path đến checkpoint sau fine-tune
     """
+    import torch
+
     from ultralytics import YOLO
 
     actual_device = get_yolo_device() if device == "auto" else device
 
     print(f"\n  🔧 Fine-tune sau pruning: {epochs} epochs, lr={lr}")
     model = YOLO(str(model_path))
+
+    masks = None
+    if mask_path is not None and mask_path.exists():
+        masks = torch.load(mask_path, map_location="cpu")
+        print(f"    🔒 Giữ nguyên {len(masks)} mask pruning xuyên suốt fine-tune")
+
+        def _reapply_masks(trainer):
+            net = trainer.model
+            named = dict(net.named_modules())
+            with torch.no_grad():
+                for name, mask in masks.items():
+                    mod = named.get(name)
+                    if mod is not None and hasattr(mod, "weight"):
+                        mod.weight.data.mul_(mask.to(device=mod.weight.device, dtype=mod.weight.dtype))
+
+        model.add_callback("on_train_batch_end", _reapply_masks)
 
     model.train(
         data=str(get_yaml_path()),
@@ -196,5 +222,24 @@ def finetune(
     if best_pt.exists():
         shutil.copy2(best_pt, out_path)
         print(f"  ✅ Fine-tuned model → {out_path}")
+
+        # best.pt là bản EMA (exponential moving average) — có thể trôi khỏi
+        # 0 rất nhẹ tại các vị trí đã prune. Ép lại lần cuối để khóa cứng
+        # sparsity trước khi giao checkpoint cuối cùng.
+        if masks is not None:
+            final = YOLO(str(out_path))
+            final_pt = final.model
+            named = dict(final_pt.named_modules())
+            with torch.no_grad():
+                for name, mask in masks.items():
+                    mod = named.get(name)
+                    if mod is not None and hasattr(mod, "weight"):
+                        mod.weight.data.mul_(mask.to(device=mod.weight.device, dtype=mod.weight.dtype))
+            final.model = final_pt
+            final.save(str(out_path))
+
+            total_w = sum(p.numel() for p in final_pt.parameters())
+            zero_w = sum((p == 0).sum().item() for p in final_pt.parameters())
+            print(f"    🔒 Sparsity cuối cùng sau khóa cứng: {zero_w/total_w*100:.1f}%")
 
     return out_path

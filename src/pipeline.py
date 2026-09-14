@@ -14,6 +14,7 @@ from .config import CHECKPOINTS_DIR, FIGURES_DIR, RESULTS_DIR, prune_cfg
 from .evaluate import benchmark_fps, benchmark_onnx_fps, evaluate_map, get_model_size
 from .prune import run_pruning_experiments
 from .quantize import run_quantization_experiments
+from .timing import log_timing
 from .train import load_model, train
 
 
@@ -34,7 +35,8 @@ def phase_train(force_retrain: bool = False, device: str = "auto") -> Path:
         print(f"\n  ✅ Đã có baseline.pt ({size_mb:.1f} MB). Dùng --force-retrain để train lại.")
         return baseline_path
 
-    train(save_name="baseline", device=device)
+    with log_timing("train_baseline"):
+        train(save_name="baseline", device=device)
     return baseline_path
 
 
@@ -126,11 +128,11 @@ def phase_quantize() -> list[dict]:
     pruned_40_ft = CHECKPOINTS_DIR / "pruned_40pct_finetuned.pt"
     pruned_path = pruned_40_ft if pruned_40_ft.exists() else None
 
-    quant_paths = run_quantization_experiments(baseline_path, pruned_path)
+    with log_timing("quantize_all"):
+        quant_paths = run_quantization_experiments(baseline_path, pruned_path)
 
     results = []
     baseline_acc = evaluate_map(baseline_path, verbose=False)
-    pruned_acc = evaluate_map(pruned_40_ft, verbose=False) if pruned_path else baseline_acc
 
     for name, path in quant_paths.items():
         if not path.exists():
@@ -140,26 +142,23 @@ def phase_quantize() -> list[dict]:
         print(f"\n  📊 Benchmark {name}...")
         try:
             if is_onnx:
+                # Đo mAP THẬT trên chính model ONNX (Ultralytics AutoBackend
+                # hỗ trợ inference trực tiếp trên .onnx) — KHÔNG dùng công
+                # thức xấp xỉ baseline×hệ_số như trước (số liệu không thật).
+                acc = evaluate_map(path, verbose=False)
                 fps = benchmark_onnx_fps(path)
-                # Đánh giá tương đối theo model gốc export ra ONNX
-                acc_source = pruned_acc if "pruned" in name else baseline_acc
-                # ONNX dynamic INT8 quantization thường làm lệch không quá 0.5 - 1.5% mAP
-                approx_acc = {
-                    "map50": max(0.0, acc_source["map50"] * 0.992),
-                    "map50_95": max(0.0, acc_source["map50_95"] * 0.988),
-                    "precision": acc_source["precision"],
-                    "recall": acc_source["recall"],
-                }
                 results.append({
                     "model": name,
                     "size_mb": get_model_size(path),
-                    **approx_acc,
+                    **acc,
                     **fps,
                     "is_onnx": True,
                 })
             else:
-                # TorchScript Dynamic Quantization
-                # Benchmark FPS thực tế bằng inference
+                # PyTorch Dynamic Quantization chỉ quantize nn.Linear.
+                # YOLOv8n hầu như không có nn.Linear (toàn Conv2d) nên model
+                # quantized về mặt toán học gần như giống hệt bản gốc — dùng
+                # lại mAP baseline là hợp lý (không có Linear nào bị đổi giá trị).
                 fps = benchmark_fps(baseline_path, verbose=False)
                 results.append({
                     "model": name,
@@ -267,7 +266,7 @@ def run_all(force_retrain: bool = False, device: str = "auto"):
 
     baseline_fps = all_results[0]["fps"] if all_results else 1
     for r in all_results:
-        map50_str = f"{r['map50']:.1f}%" if r.get("map50") is not None else "  N/A"
+        map50_str = f"{r['map50']*100:.1f}%" if r.get("map50") is not None else "  N/A"
         fps_str = f"{r['fps']:.1f}"
         size_str = f"{r['size_mb']:.1f}MB"
         speedup = r["fps"] / baseline_fps if baseline_fps > 0 else 0
