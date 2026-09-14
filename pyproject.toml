@@ -10,7 +10,7 @@ dependencies = [
     "onnx>=1.22.0",
     "onnxruntime>=1.28.0",
     "onnxslim>=0.1.96",
-    "opencv-python-headless>=5.0.0.93",
+    "opencv-python>=5.0.0.93",
     "pandas>=3.0.5",
     "torch>=2.13.0",
     "torchvision",

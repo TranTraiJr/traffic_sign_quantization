@@ -36,6 +36,12 @@ import numpy as np
 
 from PIL import Image, ImageDraw, ImageFont
 
+if sys.platform == "win32":
+    # Console/redirect trên Windows mặc định dùng codepage ANSI (vd cp1252),
+    # không encode được emoji/tiếng Việt -> ép UTF-8 để tránh UnicodeEncodeError.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -65,10 +71,17 @@ COLORS = get_color_palette(52)
 def get_system_font(size: int = 15):
     """Tìm font hệ thống có hỗ trợ tiếng Việt Unicode."""
     font_candidates = [
+        # macOS
         "/System/Library/Fonts/Supplemental/Arial.ttf",
         "/System/Library/Fonts/Helvetica.ttc",
         "/Library/Fonts/Arial.ttf",
         "/System/Library/Fonts/SFNS.ttf",
+        # Windows
+        "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/segoeui.ttf",
+        "C:/Windows/Fonts/tahoma.ttf",
+        # Linux
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     ]
     for p in font_candidates:
         if Path(p).exists():
